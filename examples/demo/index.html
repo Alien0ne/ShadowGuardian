@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ShadowGuardian demo</title>
+<style>
+  :root { color-scheme: light dark; --line: #8884; }
+  body { margin: 0; font: 16px/1.6 system-ui, sans-serif; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 16px; display: grid; gap: 24px; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
+  @media (max-width: 800px) { .wrap { grid-template-columns: 1fr; } }
+  header { grid-column: 1 / -1; }
+  h1 { margin: 0 0 4px; font-size: 22px; }
+  header p { margin: 0; opacity: .75; }
+  main, aside { border: 1px solid var(--line); border-radius: 8px; padding: 20px; min-width: 0; }
+  pre { overflow-x: auto; padding: 12px; border: 1px solid var(--line); border-radius: 6px; }
+  aside h2 { margin: 0 0 8px; font-size: 15px; }
+  #score { font-variant-numeric: tabular-nums; font-weight: 600; }
+  #log { list-style: none; margin: 12px 0 0; padding: 0; font: 13px/1.45 ui-monospace, monospace; max-height: 420px; overflow: auto; }
+  #log li { padding: 6px 0; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
+  .sev-high, .sev-critical { color: #c62828; }
+  .sev-medium { color: #b26a00; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+  button, select { font: inherit; padding: 4px 10px; }
+  code { font-family: ui-monospace, monospace; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>ShadowGuardian demo</h1>
+    <p>The lesson on the left is protected. Open DevTools and run
+      <code>document.querySelector('#lesson').innerHTML</code>, press Ctrl+P, or select everything and copy.</p>
+  </header>
+
+  <main id="lesson">
+    <h2>Lesson 4: How a hash table resolves collisions</h2>
+    <p>A hash table stores each key in a slot chosen by a hash function. Two different keys can land in the same slot,
+      and the table needs a rule for what happens next. The two common rules are separate chaining and open
+      addressing.</p>
+    <p>With separate chaining every slot holds a small list. A colliding key is appended to the list of its slot, and a
+      lookup scans that list. The table keeps working when it is over-full, at the cost of following pointers.</p>
+    <pre><code>def put(table, key, value):
+    slot = hash(key) % len(table)
+    for entry in table[slot]:
+        if entry[0] == key:
+            entry[1] = value
+            return
+    table[slot].append([key, value])</code></pre>
+    <p>With open addressing a colliding key moves on to another slot in the same array, following a probe sequence.
+      Lookups stay inside one block of memory, which is fast, but the table must be resized before it fills up.</p>
+    <p>Whichever rule is used, performance depends on the load factor: the number of stored keys divided by the number
+      of slots. Most implementations resize when it passes a threshold between one half and three quarters.</p>
+  </main>
+
+  <aside>
+    <h2>Signals <span id="score">score 0</span></h2>
+    <div class="controls">
+      <label>DOM read response
+        <select id="mode">
+          <option value="observe">observe</option>
+          <option value="poison">poison</option>
+          <option value="block">block</option>
+        </select>
+      </label>
+      <label>Cloak
+        <select id="cloak">
+          <option value="off">off</option>
+          <option value="on">on</option>
+          <option value="reorder" selected>on + reorder</option>
+        </select>
+      </label>
+      <button id="decoy" type="button">Decoy</button>
+      <button id="lockdown" type="button">Lockdown</button>
+      <button id="restore" type="button">Restore</button>
+    </div>
+    <ul id="log" aria-live="polite"></ul>
+  </aside>
+</div>
+
+<script src="../../dist/shadowguardian.global.js"></script>
+<script>
+  const params = new URLSearchParams(location.search);
+  const mode = params.get('mode') || 'observe';
+  document.getElementById('mode').value = mode;
+  document.getElementById('mode').addEventListener('change', (e) => {
+    params.set('mode', e.target.value);
+    location.search = params.toString();
+  });
+
+  // Cloak: the real lesson moves into a closed shadow tree and the light DOM keeps a decoy.
+  const cloak = params.get('cloak') || 'reorder';
+  document.getElementById('cloak').value = cloak;
+  document.getElementById('cloak').addEventListener('change', (e) => {
+    params.set('cloak', e.target.value);
+    location.search = params.toString();
+  });
+
+  const log = document.getElementById('log');
+  const score = document.getElementById('score');
+
+  const guardian = ShadowGuardian.protect({
+    content: '#lesson',
+    user: { id: 'acct_demo_42', label: 'demo.user@example.com' },
+    detectors: { domRead: { response: mode } },
+    defenses: { cloak: cloak === 'off' ? false : { reorder: cloak === 'reorder' } },
+    onSignal(signal) {
+      const li = document.createElement('li');
+      li.className = 'sev-' + signal.severity;
+      li.textContent = `[${signal.severity}] ${signal.code}: ${signal.message}`;
+      log.prepend(li);
+      score.textContent = 'score ' + guardian.score;
+    },
+  });
+  window.__sg = guardian;
+  // The page's own code keeps reading the real content, whatever the response mode is.
+  window.__pageRead = document.querySelector('#lesson').textContent;
+
+  document.getElementById('decoy').addEventListener('click', () => guardian.decoy());
+  document.getElementById('lockdown').addEventListener('click', () => guardian.lockdown());
+  document.getElementById('restore').addEventListener('click', () => guardian.restore());
+</script>
+</body>
+</html>

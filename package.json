@@ -1,0 +1,74 @@
+{
+  "name": "shadowguardian",
+  "version": "0.1.0",
+  "description": "Detect silent content extraction and make every copy traceable to the account it was served to",
+  "license": "Apache-2.0",
+  "author": "Alien0ne",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Alien0ne/ShadowGuardian.git"
+  },
+  "homepage": "https://github.com/Alien0ne/ShadowGuardian#readme",
+  "bugs": {
+    "url": "https://github.com/Alien0ne/ShadowGuardian/issues"
+  },
+  "keywords": [
+    "content-protection",
+    "anti-scraping",
+    "cdp",
+    "devtools-protocol",
+    "headless-detection",
+    "watermark",
+    "honeypot",
+    "drm",
+    "bot-detection"
+  ],
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "unpkg": "./dist/shadowguardian.global.js",
+  "jsdelivr": "./dist/shadowguardian.global.js",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "node test/e2e/cdp-read.mjs",
+    "test:patchright": "node test/e2e/patchright-attack.mjs",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run typecheck && npm test"
+  },
+  "devDependencies": {
+    "jsdom": "^31.0.1",
+    "patchright": "^1.64.3",
+    "puppeteer": "^25.17.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "tsup": "^9.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^5.1.0"
+  }
+}
